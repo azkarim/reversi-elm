@@ -1,22 +1,22 @@
 module Main exposing (..)
 
+import Array
 import Board exposing (..)
 import Browser exposing (element)
+import Css.Global exposing (Snippet, global)
 import Html.Styled as H exposing (Html, toUnstyled, div, button)
-import Html.Styled.Events as HE exposing (onClick)
 import Html.Styled.Attributes as HA exposing (style)
+import Html.Styled.Events as HE exposing (onClick)
+import List.Extra as ListE
+import Process
+import Random
+import Random.Extra as RandomE
+import Set
+import Style exposing (..)
 import Svg.Styled exposing (..)
 import Svg.Styled.Attributes as SA exposing (..)
 import Svg.Styled.Events exposing (onClick, onMouseOver, onMouseOut)
-import Css.Global exposing (Snippet, global)
-import Style exposing (..)
-import Array
-import List.Extra as ListE
-import Set
 import Task
-import Process
-import Random.Extra as RandomE
-import Random
 
 
 main : Program () Model Msg
@@ -53,7 +53,7 @@ viewGame model =
 
 styleStore : Html Msg
 styleStore =
-    global <| [ reset ] ++ mainStyle
+    global <| [ Style.reset ] ++ Style.mainStyle
 
 
 
@@ -211,12 +211,14 @@ update msg model =
                 )
 
 
+showPotent : Model -> Cell -> Array.Array (Array.Array Cell)
 showPotent { board, turn } ( cuid, pos, stat ) =
     reduceBoard board turn ( cuid, pos, stat )
         |> List.map (\( c, p, s ) -> ( c, p, Played Fill (opponent turn) ))
         |> patchCellList board
 
 
+removePotent : Model -> Cell -> Array.Array (Array.Array Cell)
 removePotent { board, turn } ( cuid, pos, stat ) =
     let
         revertPotent s0 =
@@ -239,6 +241,7 @@ removePotent { board, turn } ( cuid, pos, stat ) =
             |> patchCellList board
 
 
+updateBoard : Model -> Cell -> Array.Array (Array.Array Cell)
 updateBoard { board, turn } ( cuid, pos, stat ) =
     let
         overturnedList =
@@ -276,7 +279,7 @@ updateBoard { board, turn } ( cuid, pos, stat ) =
 
 
 
---- Util
+--- GENERIC FUNCTIONS
 
 
 patchCellList : Array.Array (Array.Array Cell) -> List Cell -> Array.Array (Array.Array Cell)
@@ -322,10 +325,12 @@ flattenArr arr =
 --- View
 
 
+initPatch : List Cell
 initPatch =
     [ ( 27, Position 3 3, Played None Home ), ( 35, Position 3 4, Played None Away ), ( 28, Position 4 3, Played None Away ), ( 36, Position 4 4, Played None Home ) ]
 
 
+initBoard : Array.Array (Array.Array Cell)
 initBoard =
     let
         cuidConv =

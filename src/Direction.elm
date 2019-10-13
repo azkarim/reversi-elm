@@ -1,6 +1,6 @@
 module Direction exposing (north, south, east, west, northEast, northWest, southEast, southWest)
 
---- GENERIC FUNCTION
+--- GENERIC FUNCTIONS
 
 
 cuidGen c r =
