@@ -1,3 +1,3 @@
 # Reversi
 Reversi game written in Elm  
-[Play](https://reversi-elm.netlify.com/)
+[Play](https://azkarim.netlify.com/games/reversi)
