@@ -1,8 +1,8 @@
 module Board exposing (..)
 
+import Array
 import Direction exposing (..)
 import List.Extra as ListE
-import Array
 
 
 type alias Column =
