@@ -435,7 +435,7 @@ viewACell highlight ( cuid, { col, row }, status ) =
                     SA.style ""
 
                 _ ->
-                    onClick (Play ( cuid, Position col row, status ))
+                    HE.onClick (Play ( cuid, Position col row, status ))
 
         disableCursor stat =
             case stat of
