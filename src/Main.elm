@@ -3,19 +3,17 @@ module Main exposing (..)
 import Array
 import Board exposing (..)
 import Browser exposing (element)
-import Css.Global exposing (Snippet, global)
-import Html.Styled as H exposing (Html, toUnstyled, div, button)
-import Html.Styled.Attributes as HA exposing (style)
-import Html.Styled.Events as HE exposing (onClick)
-import List.Extra as ListE
+import Css.Global exposing (global)
+import Helpers exposing (cuidGen)
+import Html.Styled as H exposing (Html, button, div)
+import Html.Styled.Events as HE
 import Process
 import Random
 import Random.Extra as RandomE
-import Set
 import Style exposing (..)
 import Svg.Styled exposing (..)
 import Svg.Styled.Attributes as SA exposing (..)
-import Svg.Styled.Events exposing (onClick, onMouseOver, onMouseOut)
+import Svg.Styled.Events exposing (onMouseOut, onMouseOver)
 import Task
 
 
@@ -53,7 +51,7 @@ viewGame model =
 
 styleStore : Html Msg
 styleStore =
-    global <| [ Style.reset ] ++ Style.mainStyle
+    global <| Style.reset :: Style.mainStyle
 
 
 
@@ -126,89 +124,94 @@ update msg model =
                 |> ifEmptyIsReducible board turn
                 |> turnToPlayable turn
     in
-        case msg of
-            PickPlayer player ->
-                ( { model | turn = player }, Cmd.none )
+    case msg of
+        PickPlayer player ->
+            ( { model | turn = player }, Cmd.none )
 
-            Restart ->
-                ( { model | gameStatus = Playing }, randomPlayer PickPlayerAgain )
+        Restart ->
+            ( { model | gameStatus = Playing }, randomPlayer PickPlayerAgain )
 
-            PickPlayerAgain player ->
-                ( { model | turn = player, board = showPlayable initBoard player |> patchCellList initBoard }, Cmd.none )
+        PickPlayerAgain player ->
+            ( { model | turn = player, board = showPlayable initBoard player |> patchCellList initBoard }, Cmd.none )
 
-            PassTurn ->
-                let
-                    advancePlayable =
-                        showPlayable model.board (opponent model.turn)
-                            |> patchCellList model.board
-                            |> flattenArr
-                            |> List.filter (\( _, _, s ) -> s == (Playable (opponent model.turn)))
+        PassTurn ->
+            let
+                advancePlayable =
+                    showPlayable model.board (opponent model.turn)
+                        |> patchCellList model.board
+                        |> flattenArr
+                        |> List.filter (\( _, _, s ) -> s == Playable (opponent model.turn))
 
-                    isPass =
-                        if List.isEmpty advancePlayable then
-                            Pass (opponent model.turn)
-                        else
-                            Playing
-                in
-                    if not (List.isEmpty advancePlayable) then
-                        ( { model | gameStatus = Playing, turn = opponent model.turn, board = showPlayable model.board (opponent model.turn) |> patchCellList model.board }, Cmd.none )
+                isPass =
+                    if List.isEmpty advancePlayable then
+                        Pass (opponent model.turn)
+
                     else
-                        ( { model | turn = opponent model.turn, gameStatus = Pass (opponent model.turn) }
-                        , Process.sleep 1500 |> Task.perform (always EndGame)
-                        )
+                        Playing
+            in
+            if not (List.isEmpty advancePlayable) then
+                ( { model | gameStatus = Playing, turn = opponent model.turn, board = showPlayable model.board (opponent model.turn) |> patchCellList model.board }, Cmd.none )
 
-            EndGame ->
-                ( { model | gameStatus = GameOver }, Cmd.none )
-
-            StartGame ->
-                ( { model | board = (showPlayable model.board model.turn |> patchCellList model.board), view = Game }
-                , Cmd.none
+            else
+                ( { model | turn = opponent model.turn, gameStatus = Pass (opponent model.turn) }
+                , Process.sleep 1500 |> Task.perform (always EndGame)
                 )
 
-            Play ( cuid, { col, row }, stat ) ->
-                let
-                    findEmptyOrPlayable =
-                        flattenArr model.board
-                            |> List.filter (\( _, _, s ) -> (s == Empty) || (s == Playable Home) || (s == Playable Away))
+        EndGame ->
+            ( { model | gameStatus = GameOver }, Cmd.none )
 
-                    updatedBoard =
-                        updateBoard model ( cuid, Position col row, stat )
+        StartGame ->
+            ( { model | board = showPlayable model.board model.turn |> patchCellList model.board, view = Game }
+            , Cmd.none
+            )
 
-                    opponentPlayable =
-                        flattenArr updatedBoard
-                            |> List.filter (\( _, _, s ) -> (s == Playable (opponent model.turn)))
+        Play ( cuid, { col, row }, stat ) ->
+            let
+                findEmptyOrPlayable =
+                    flattenArr model.board
+                        |> List.filter (\( _, _, s ) -> (s == Empty) || (s == Playable Home) || (s == Playable Away))
 
-                    advancePlayable =
-                        updatedBoard
-                            |> (\board -> showPlayable board model.turn)
+                updatedBoard =
+                    updateBoard model ( cuid, Position col row, stat )
 
-                    isPass =
-                        if (List.isEmpty opponentPlayable) && (List.isEmpty advancePlayable) then
-                            GameOver
-                        else if List.isEmpty opponentPlayable then
-                            Pass (opponent model.turn)
-                        else
-                            Playing
-                in
-                    ( { model | board = updatedBoard, gameStatus = isPass, turn = opponent model.turn }
-                    , (if (List.isEmpty opponentPlayable) && (List.isEmpty advancePlayable) then
-                        Cmd.none
-                       else if List.isEmpty opponentPlayable then
-                        Process.sleep 1500 |> Task.perform (always PassTurn)
-                       else
-                        Cmd.none
-                      )
-                    )
+                opponentPlayable =
+                    flattenArr updatedBoard
+                        |> List.filter (\( _, _, s ) -> s == Playable (opponent model.turn))
 
-            ShowPotent ( cuid, { col, row }, stat ) ->
-                ( { model | board = showPotent model ( cuid, Position col row, stat ), highlight = Position col row }
-                , Cmd.none
-                )
+                advancePlayable =
+                    updatedBoard
+                        |> (\board -> showPlayable board model.turn)
 
-            RemovePotent ( cuid, { col, row }, stat ) ->
-                ( { model | board = removePotent model ( cuid, Position col row, stat ), highlight = Position 100 100 }
-                , Cmd.none
-                )
+                isPass =
+                    if List.isEmpty opponentPlayable && List.isEmpty advancePlayable then
+                        GameOver
+
+                    else if List.isEmpty opponentPlayable then
+                        Pass (opponent model.turn)
+
+                    else
+                        Playing
+            in
+            ( { model | board = updatedBoard, gameStatus = isPass, turn = opponent model.turn }
+            , if List.isEmpty opponentPlayable && List.isEmpty advancePlayable then
+                Cmd.none
+
+              else if List.isEmpty opponentPlayable then
+                Process.sleep 1500 |> Task.perform (always PassTurn)
+
+              else
+                Cmd.none
+            )
+
+        ShowPotent ( cuid, { col, row }, stat ) ->
+            ( { model | board = showPotent model ( cuid, Position col row, stat ), highlight = Position col row }
+            , Cmd.none
+            )
+
+        RemovePotent ( cuid, { col, row }, stat ) ->
+            ( { model | board = removePotent model ( cuid, Position col row, stat ), highlight = Position 100 100 }
+            , Cmd.none
+            )
 
 
 showPotent : Model -> Cell -> Array.Array (Array.Array Cell)
@@ -229,16 +232,17 @@ removePotent { board, turn } ( cuid, pos, stat ) =
                 _ ->
                     Empty
     in
-        flattenArr board
-            |> List.filter
-                (\( c, p, s ) ->
-                    if ((s == Played Fill Home) || (s == Played Fill Away)) then
-                        True
-                    else
-                        False
-                )
-            |> List.map (\( c, p, s ) -> ( c, p, revertPotent s ))
-            |> patchCellList board
+    flattenArr board
+        |> List.filter
+            (\( c, p, s ) ->
+                if (s == Played Fill Home) || (s == Played Fill Away) then
+                    True
+
+                else
+                    False
+            )
+        |> List.map (\( c, p, s ) -> ( c, p, revertPotent s ))
+        |> patchCellList board
 
 
 updateBoard : Model -> Cell -> Array.Array (Array.Array Cell)
@@ -250,13 +254,14 @@ updateBoard { board, turn } ( cuid, pos, stat ) =
                 >> (\list ->
                         if List.isEmpty list then
                             []
+
                         else
-                            (++) [ ( cuid, pos, Played None turn ) ] list
+                            ( cuid, pos, Played None turn ) :: list
                    )
 
         removePlayableStat =
             flattenArr board
-                |> List.filter (\( _, _, s ) -> s == (Playable turn))
+                |> List.filter (\( _, _, s ) -> s == Playable turn)
                 |> List.filter (\( c, _, _ ) -> c /= cuid)
                 |> List.map (\( c, p, _ ) -> ( c, p, Empty ))
 
@@ -269,13 +274,14 @@ updateBoard { board, turn } ( cuid, pos, stat ) =
                     Home
 
         newBoard =
-            (++) overturnedList removePlayableStat
+            overturnedList
+                ++ removePlayableStat
                 |> patchCellList board
     in
-        findEmpty newBoard advanceTurn
-            |> ifEmptyIsReducible newBoard advanceTurn
-            |> turnToPlayable advanceTurn
-            |> patchCellList newBoard
+    findEmpty newBoard advanceTurn
+        |> ifEmptyIsReducible newBoard advanceTurn
+        |> turnToPlayable advanceTurn
+        |> patchCellList newBoard
 
 
 
@@ -288,10 +294,10 @@ patchCellList board list =
         extractCuid =
             List.map (\( cuid0, _, _ ) -> cuid0) list
     in
-        flattenArr board
-            |> List.filter (\( cuid1, _, _ ) -> not (List.member cuid1 extractCuid))
-            >> (++) list
-            >> createBoard
+    flattenArr board
+        |> List.filter (\( cuid1, _, _ ) -> not (List.member cuid1 extractCuid))
+        >> (++) list
+        >> createBoard
 
 
 createBoard : List Cell -> Array.Array (Array.Array Cell)
@@ -304,10 +310,10 @@ createBoard list =
             List.take end sortedList
                 |> List.drop begin
     in
-        List.range 1 8
-            |> List.map (\n -> splitList (8 * (n - 1)) (n * 8))
-            >> List.map (\x -> Array.fromList x)
-            >> Array.fromList
+    List.range 1 8
+        |> List.map (\n -> splitList (8 * (n - 1)) (n * 8))
+        >> List.map (\x -> Array.fromList x)
+        >> Array.fromList
 
 
 flattenArr : Array.Array (Array.Array Cell) -> List Cell
@@ -333,20 +339,17 @@ initPatch =
 initBoard : Array.Array (Array.Array Cell)
 initBoard =
     let
-        cuidConv =
-            (\c r -> (r * 8) + c)
-
         col =
             List.range 0 7
 
         colGen row =
-            List.map (\col_ -> ( (cuidConv col_ row), Position col_ row, Empty )) col
+            List.map (\col_ -> ( cuidGen col_ row, Position col_ row, Empty )) col
                 |> Array.fromList
     in
-        List.range 0 7
-            |> List.map (\row -> colGen row)
-            >> Array.fromList
-            >> (\b -> patchCellList b initPatch)
+    List.range 0 7
+        |> List.map (\row -> colGen row)
+        >> Array.fromList
+        >> (\b -> patchCellList b initPatch)
 
 
 viewGrid : Model -> List (Svg Msg)
@@ -355,11 +358,11 @@ viewGrid { board, highlight } =
         arrToList_ list =
             list |> Array.toList
     in
-        board
-            |> Array.toList
-            >> List.map (\list -> arrToList_ list)
-            >> List.concat
-            >> List.map (\cell -> viewACell highlight cell)
+    board
+        |> Array.toList
+        >> List.map (\list -> arrToList_ list)
+        >> List.concat
+        >> List.map (\cell -> viewACell highlight cell)
 
 
 viewACell : Position -> Cell -> Svg Msg
@@ -388,27 +391,27 @@ viewACell highlight ( cuid, { col, row }, status ) =
                         ]
                         []
             in
-                case status of
-                    Empty ->
-                        text ""
+            case status of
+                Empty ->
+                    text ""
 
-                    Playable Home ->
-                        circle_ "#70ae6e" "#000"
+                Playable Home ->
+                    circle_ "#70ae6e" "#000"
 
-                    Playable Away ->
-                        circle_ "#70ae6e" "#fff"
+                Playable Away ->
+                    circle_ "#70ae6e" "#fff"
 
-                    Played None Home ->
-                        circle_ "#000" "#000"
+                Played None Home ->
+                    circle_ "#000" "#000"
 
-                    Played None Away ->
-                        circle_ "#fff" "#fff"
+                Played None Away ->
+                    circle_ "#fff" "#fff"
 
-                    Played Fill Home ->
-                        circle_ "#f6f6f6" "#000"
+                Played Fill Home ->
+                    circle_ "#f6f6f6" "#000"
 
-                    Played Fill Away ->
-                        circle_ "#222" "#fff"
+                Played Fill Away ->
+                    circle_ "#222" "#fff"
 
         disableOnMouseOver stat =
             case stat of
@@ -446,25 +449,26 @@ viewACell highlight ( cuid, { col, row }, status ) =
                     SA.cursor ""
 
         viewBg h =
-            if ((Position h.col h.row) == (Position col row)) then
+            if Position h.col h.row == Position col row then
                 "#65a863"
+
             else
                 "#70ae6e"
     in
-        g []
-            [ rect
-                [ width "60"
-                , height "60"
-                , x <| String.fromInt x_
-                , y <| String.fromInt y_
-                , fill <| viewBg highlight
-                , stroke "#243e23"
-                , disableOnClick status
-                , disableCursor status
-                ]
-                []
-            , viewCircle
+    g []
+        [ rect
+            [ width "60"
+            , height "60"
+            , x <| String.fromInt x_
+            , y <| String.fromInt y_
+            , fill <| viewBg highlight
+            , stroke "#243e23"
+            , disableOnClick status
+            , disableCursor status
             ]
+            []
+        , viewCircle
+        ]
 
 
 viewScore : Model -> Player -> Int
@@ -476,8 +480,9 @@ viewScore model player =
 
 showPassOrScore : Model -> Player -> String
 showPassOrScore model player =
-    if (model.gameStatus == Pass player) then
+    if model.gameStatus == Pass player then
         "Pass"
+
     else
         String.fromInt <| viewScore model player
 
@@ -486,6 +491,7 @@ showBorder : Model -> Player -> String
 showBorder model player =
     if (model.gameStatus == Playing) && (model.turn == player) then
         " border"
+
     else
         ""
 
@@ -517,22 +523,26 @@ viewWinnerOrTie model panelResult player =
         opponentScore =
             viewScore model (opponent player)
     in
-        case panelResult of
-            GameResult ->
-                if (model.gameStatus == GameOver) && (playerScore == opponentScore) then
-                    "Tie"
-                else if (model.gameStatus == GameOver) && (playerScore > opponentScore) then
-                    "Winner"
-                else
-                    "Loser"
+    case panelResult of
+        GameResult ->
+            if (model.gameStatus == GameOver) && (playerScore == opponentScore) then
+                "Tie"
 
-            Panel ->
-                if (model.gameStatus == GameOver) && (playerScore == opponentScore) then
-                    " show"
-                else if (model.gameStatus == GameOver) && (playerScore > opponentScore) then
-                    " show"
-                else
-                    ""
+            else if (model.gameStatus == GameOver) && (playerScore > opponentScore) then
+                "Winner"
+
+            else
+                "Loser"
+
+        Panel ->
+            if (model.gameStatus == GameOver) && (playerScore == opponentScore) then
+                " show"
+
+            else if (model.gameStatus == GameOver) && (playerScore > opponentScore) then
+                " show"
+
+            else
+                ""
 
 
 viewGame_ : Model -> Html Msg

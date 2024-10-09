@@ -2,6 +2,7 @@ module Board exposing (..)
 
 import Array
 import Direction exposing (..)
+import Helpers exposing (cuidGen)
 import List.Extra as ListE
 
 
@@ -52,14 +53,6 @@ type Direction
     | NorthWest
     | SouthWest
     | SouthEast
-
-
-
---- GENERIC FUNCTIONS
-
-
-cuidGen c r =
-    (r * 8) + c
 
 
 opponent : Player -> Player
@@ -120,31 +113,39 @@ findEmpty board turn =
         dirList pos =
             if (pos.col == 0) && (pos.row == 0) then
                 [ east_, south_, southEast_ ]
+
             else if (pos.col == 7) && (pos.row == 0) then
                 [ west_, south_, southWest_ ]
+
             else if (pos.col == 7) && (pos.row == 7) then
                 [ north_, northWest_, west_ ]
+
             else if (pos.col == 0) && (pos.row == 7) then
                 [ north_, northEast_, east_ ]
+
             else if (pos.col == 0) && (pos.row >= 1) && (pos.row <= 6) then
                 [ north_, northEast_, east_, southEast_, south_ ]
+
             else if (pos.col == 7) && (pos.row >= 1) && (pos.row <= 6) then
                 [ north_, northWest_, west_, southWest_, south_ ]
+
             else if (pos.row == 7) && (pos.col >= 1) && (pos.col <= 6) then
                 [ north_, northWest_, west_, east_ ]
+
             else if (pos.row == 0) && (pos.col >= 1) && (pos.col <= 6) then
                 [ east_, southEast_, south_, southWest_, west_ ]
+
             else
                 [ north_, northEast_, east_, southEast_, south_, southWest_, west_, northWest_ ]
 
         surroundingCells =
             flatArr
-                |> List.filter (\( _, _, s ) -> ((s == Played Fill (opponent turn)) || (s == Played None (opponent turn))))
+                |> List.filter (\( _, _, s ) -> (s == Played Fill (opponent turn)) || (s == Played None (opponent turn)))
                 |> List.map (\( c, pos, _ ) -> List.map (\dir -> dir c) (dirList pos))
                 |> List.concat
     in
-        flatArr
-            |> List.filter (\( cuid, _, stat ) -> ((List.member cuid surroundingCells) && (stat == Empty)))
+    flatArr
+        |> List.filter (\( cuid, _, stat ) -> List.member cuid surroundingCells && (stat == Empty))
 
 
 ifEmptyIsReducible : Array.Array (Array.Array Cell) -> Player -> List Cell -> List Cell
@@ -154,6 +155,7 @@ ifEmptyIsReducible board turn list =
             (\cell ->
                 if List.isEmpty (reduceBoard board turn cell) then
                     []
+
                 else
                     [ cell ]
             )
@@ -189,10 +191,11 @@ succRedList board turn dir ( cuid, pos, status ) =
             possibleReducList board turn dir ( cuid, pos, status )
                 |> checkOffsetItem board turn dir
     in
-        if isRedPossible then
-            possibleReducList board turn dir ( cuid, pos, status )
-        else
-            []
+    if isRedPossible then
+        possibleReducList board turn dir ( cuid, pos, status )
+
+    else
+        []
 
 
 checkOffsetItem : Array.Array (Array.Array Cell) -> Player -> Direction -> List Cell -> Bool
@@ -207,43 +210,49 @@ checkOffsetItem board turn dir list =
                     cuidGen p.col (p.row + 1)
 
                 East ->
-                    if (p.col == 7) then
-                        cuidGen p.col (-2)
+                    if p.col == 7 then
+                        cuidGen p.col -2
+
                     else
-                        cuidGen (p.col + 1) (p.row)
+                        cuidGen (p.col + 1) p.row
 
                 West ->
-                    if (p.col == 0) then
-                        cuidGen p.col (-2)
+                    if p.col == 0 then
+                        cuidGen p.col -2
+
                     else
-                        cuidGen (p.col - 1) (p.row)
+                        cuidGen (p.col - 1) p.row
 
                 NorthEast ->
-                    if (p.col == 7) then
-                        cuidGen p.col (-2)
+                    if p.col == 7 then
+                        cuidGen p.col -2
+
                     else
                         cuidGen (p.col + 1) (p.row - 1)
 
                 NorthWest ->
-                    if (p.col == 0) then
-                        cuidGen p.col (-2)
+                    if p.col == 0 then
+                        cuidGen p.col -2
+
                     else
                         cuidGen (p.col - 1) (p.row - 1)
 
                 SouthWest ->
-                    if (p.col == 0) then
-                        cuidGen p.col (-2)
+                    if p.col == 0 then
+                        cuidGen p.col -2
+
                     else
                         cuidGen (p.col - 1) (p.row + 1)
 
                 SouthEast ->
-                    if (p.col == 7) then
-                        cuidGen p.col (-2)
+                    if p.col == 7 then
+                        cuidGen p.col -2
+
                     else
                         cuidGen (p.col + 1) (p.row + 1)
 
         lastVal =
-            case (ListE.last list) of
+            case ListE.last list of
                 Just a ->
                     a
 
@@ -252,12 +261,12 @@ checkOffsetItem board turn dir list =
 
         retrievedLastStat =
             flattenArr board
-                |> List.filter (\( cuid, pos, stat ) -> cuid == (offsetCuid lastVal))
+                |> List.filter (\( cuid, pos, stat ) -> cuid == offsetCuid lastVal)
                 |> List.map (\( _, _, stat ) -> stat)
                 |> List.head
-                |> Maybe.withDefault (Empty)
+                |> Maybe.withDefault Empty
     in
-        ((retrievedLastStat == Played Fill turn) || (retrievedLastStat == Played None turn))
+    (retrievedLastStat == Played Fill turn) || (retrievedLastStat == Played None turn)
 
 
 possibleReducList : Array.Array (Array.Array Cell) -> Player -> Direction -> Cell -> List Cell
@@ -329,9 +338,9 @@ possibleReducList board turn dir ( cuid, pos, status ) =
                     list
                         |> List.sortBy (\( cuid0, _, _ ) -> cuid0)
     in
-        flattenArr board
-            |> List.filter (\( cuid0, _, _ ) -> List.member cuid0 reducList)
-            -- Sort is direction dependent
-            |> sortDir dir
-            |> ListE.takeWhile (\( _, _, stat ) -> ((stat /= Empty) && (stat /= Playable turn) && (stat /= Playable (opponent turn))))
-            |> ListE.takeWhile (\( _, _, stat ) -> ((stat /= (Played Fill turn)) && (stat /= (Played None turn))))
+    flattenArr board
+        |> List.filter (\( cuid0, _, _ ) -> List.member cuid0 reducList)
+        -- Sort is direction dependent
+        |> sortDir dir
+        |> ListE.takeWhile (\( _, _, stat ) -> (stat /= Empty) && (stat /= Playable turn) && (stat /= Playable (opponent turn)))
+        |> ListE.takeWhile (\( _, _, stat ) -> (stat /= Played Fill turn) && (stat /= Played None turn))
