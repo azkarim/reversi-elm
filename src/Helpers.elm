@@ -1,6 +1,8 @@
-module Helpers exposing (cuidGen)
+module Helpers exposing (cellIdGen)
+
+-- Generate CellId
 
 
-cuidGen : number -> number -> number
-cuidGen c r =
+cellIdGen : number -> number -> number
+cellIdGen c r =
     (r * 8) + c

@@ -2,7 +2,7 @@ module Board exposing (..)
 
 import Array
 import Direction exposing (..)
-import Helpers exposing (cuidGen)
+import Helpers exposing (cellIdGen)
 import List.Extra as ListE
 
 
@@ -20,12 +20,12 @@ type alias Position =
     }
 
 
-type alias Cuid =
+type alias CellId =
     Int
 
 
 type alias Cell =
-    ( Cuid, Position, Status )
+    ( CellId, Position, Status )
 
 
 type Status
@@ -77,7 +77,7 @@ flattenArr arr =
 
 
 
--- Extract all the Empty Cells and filter the ones that can be played and tag them as Playable Player.
+-- Extract all the Empty Cells and filter the ones that can be played and tag them as Playable by Player.
 
 
 findEmpty : Array.Array (Array.Array Cell) -> Player -> List Cell
@@ -204,52 +204,52 @@ checkOffsetItem board turn dir list =
         offsetCuid ( c, p, s ) =
             case dir of
                 North ->
-                    cuidGen p.col (p.row - 1)
+                    cellIdGen p.col (p.row - 1)
 
                 South ->
-                    cuidGen p.col (p.row + 1)
+                    cellIdGen p.col (p.row + 1)
 
                 East ->
                     if p.col == 7 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col + 1) p.row
+                        cellIdGen (p.col + 1) p.row
 
                 West ->
                     if p.col == 0 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col - 1) p.row
+                        cellIdGen (p.col - 1) p.row
 
                 NorthEast ->
                     if p.col == 7 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col + 1) (p.row - 1)
+                        cellIdGen (p.col + 1) (p.row - 1)
 
                 NorthWest ->
                     if p.col == 0 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col - 1) (p.row - 1)
+                        cellIdGen (p.col - 1) (p.row - 1)
 
                 SouthWest ->
                     if p.col == 0 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col - 1) (p.row + 1)
+                        cellIdGen (p.col - 1) (p.row + 1)
 
                 SouthEast ->
                     if p.col == 7 then
-                        cuidGen p.col -2
+                        cellIdGen p.col -2
 
                     else
-                        cuidGen (p.col + 1) (p.row + 1)
+                        cellIdGen (p.col + 1) (p.row + 1)
 
         lastVal =
             case ListE.last list of

@@ -4,7 +4,7 @@ import Array
 import Board exposing (..)
 import Browser exposing (element)
 import Css.Global exposing (global)
-import Helpers exposing (cuidGen)
+import Helpers exposing (cellIdGen)
 import Html.Styled as H exposing (Html, button, div)
 import Html.Styled.Events as HE
 import Process
@@ -343,7 +343,7 @@ initBoard =
             List.range 0 7
 
         colGen row =
-            List.map (\col_ -> ( cuidGen col_ row, Position col_ row, Empty )) col
+            List.map (\col_ -> ( cellIdGen col_ row, Position col_ row, Empty )) col
                 |> Array.fromList
     in
     List.range 0 7
