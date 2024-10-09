@@ -316,17 +316,6 @@ createBoard list =
         >> Array.fromList
 
 
-flattenArr : Array.Array (Array.Array Cell) -> List Cell
-flattenArr arr =
-    arr
-        -- A(A Cell)
-        |> Array.toList
-        -- L(A Cell)
-        >> List.map (\el -> Array.toList el)
-        -- L(L Cell)
-        >> List.concat
-
-
 
 --- View
 
